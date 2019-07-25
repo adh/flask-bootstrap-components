@@ -1,0 +1,37 @@
+<div {%if table.anchor%}id="{{table.anchor}}"{%endif%}>
+  {%include "flask_bootstrap_components/internal/table.html" %}
+  <nav>
+    {%if table.per_page_options%}
+      <ul class="pagination pagination-sm float-left">
+	{%for i in table.per_page_options%}
+	<li class="page-item">
+	  <a class="page-link" href="{{table.per_page_url(i)}}">{{i}}</a>
+	</li>
+	{%endfor%}
+      </ul>
+    {%endif%}
+    
+    <ul class="pagination pagination-sm float-right">
+      {%if table.cur_page > 0: %}
+	<li class="page-item">
+	  <a class="page-link" href="{{table.page_url(table.cur_page-1)}}">&laquo;</a>
+	</li>
+      {%else%}
+	<li class="page-item disabled">
+	  <a class="page-link">&laquo;</a>
+	</li>
+	
+      {%endif%}
+      <li class="page-item"><span class="page-link">{{table.cur_page + 1}}</span></li>
+      {%if table.has_next: %}
+      <li class="page-item">
+	<a class="page-link" href="{{table.page_url(table.cur_page+1)}}">&raquo;</a>
+      </li>
+      {%else%}
+      <li class="page-item disabled">
+	<a class="page-link">&raquo;</a>
+      </li>
+      {%endif%}
+    </ul>
+  </nav>
+</div>

@@ -1,3 +1,6 @@
+{%if table.responsive%}
+<div class="table-responsive">
+{%endif%}
 <table id="{{table.name}}" 
        class="table{{table.extend_classes}}">
         <thead>
@@ -14,3 +17,6 @@
           {%endfor%}
         </tbody>
 </table>
+{%if table.responsive%}
+</div>
+{%endif%}

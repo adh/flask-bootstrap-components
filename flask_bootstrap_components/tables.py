@@ -1,4 +1,4 @@
-from flask import render_template
+from flask import render_template, request, url_for
 from markupsafe import Markup
 from .markup import element
 
@@ -172,3 +172,53 @@ class PlainTable(SequenceColumnMixin, IterableDataTable):
     pass
 class ObjectTable(ObjectColumnMixin, IterableDataTable):
     pass
+
+class PagedTable(PlainTable):
+    def __init__(self, columns, data,
+                 per_page=None,
+                 cur_page=None,
+                 per_page_options=[10, 50, 100],
+                 anchor=None,
+                 **kwargs):
+        if not cur_page:
+            cur_page = int(request.args.get("cur_page", "0"))
+        if not per_page:
+            per_page = int(request.args.get("per_page", per_page_options[0]))
+        else:
+            per_page_options = []
+
+        self.anchor = anchor
+        self.per_page = per_page
+        self.cur_page = cur_page
+        self.per_page_options = per_page_options
+
+        data = data[self.cur_page*self.per_page:(self.cur_page+1)*self.per_page]
+
+        self.has_next = len(data) == self.per_page
+        
+        super().__init__(columns, data, 
+                         **kwargs)
+    
+    def __html__(self):
+        return Markup(render_template('flask_bootstrap_components/internal/paged_table.html',
+                                      table=self))
+
+    def with_anchor(self, url):
+        if self.anchor:
+            return url + "#" + self.anchor
+        else:
+            return url
+    
+    def page_url(self, page):
+        args = dict(request.args)
+        args["cur_page"] = page
+        args["per_page"] = self.per_page
+        return self.with_anchor(url_for(request.endpoint, **args))
+
+    def per_page_url(self, per_page):
+        args = dict(request.args)
+        page = int(self.cur_page / self.per_page * per_page)
+        args["cur_page"] = page
+        args["per_page"] = per_page
+        return self.with_anchor(url_for(request.endpoint, **args))
+    
