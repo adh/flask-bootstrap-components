@@ -1,0 +1,2 @@
+from flask_bootstrap_components.base import FlaskBootstrapComponents
+
