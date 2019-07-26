@@ -5,7 +5,7 @@ from .markup import element
 DEFAULT_CONTENT_MAP = {
     True: "\u2713",
     False: "\u2715",
-    None: "\u1f6ab",
+    None: "\U0001f6ab",
 }
 
 class Column(object):
@@ -84,9 +84,9 @@ class ObjectOrNoneColumn(ObjectColumn):
             return None
 
 class LinkColumnMixin:
-    def get_cell_data(self, row):
+    def get_cell_inner_html(self, row):
         return Markup('<a href="{}">{}</a>').format(self.href(row),
-                                                    super().get_cell_data(row))
+                                                    super().get_cell_inner_html(row))
     
         
 class ObjectLinkColumn(LinkColumnMixin, ObjectColumn):
