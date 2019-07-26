@@ -2,13 +2,19 @@ from flask import render_template, request, url_for
 from markupsafe import Markup
 from .markup import element
 
+DEFAULT_CONTENT_MAP = {
+    True: "\u2713",
+    False: "\u2715",
+    None: "\u1f6ab",
+}
+
 class Column(object):
     def __init__(self, 
                  name, 
                  options={},
                  convert=None,
                  data_proc=None,
-                 content_map={},
+                 content_map=DEFAULT_CONTENT_MAP,
                  **kwargs):
         self.name = name
         self.id = name
@@ -33,19 +39,16 @@ class Column(object):
         res = self.get_cell_data(row)
         res = self.convert(res)
 
-        try:
-            if res in self.content_map:
-                return self.content_map[res]
-        except:
-            pass
+        if res in self.content_map:
+            return self.content_map[res]
         
         return res
 
 class CustomDataColumn(Column):
     def __init__(self, name, key, **kwargs):
-        super(SequenceColumn, self).__init__(name, index=index, **kwargs)
+        super().__init__(name, key=key, **kwargs)
         self.key = key
-        self.id = str(index)
+        self.id = str(id(key))
 
     def get_cell_data(self, row):
         return self.key(row)
@@ -58,18 +61,20 @@ class SequenceColumn(Column):
     def get_cell_data(self, row):
         return row[self.index]
 
+def recursive_getattr(r, attr):
+    for i in attr.split('.'):
+        r = getattr(r, i)
+        if r is None:
+            return None
+    return r
+    
 class ObjectColumn(Column): 
     def __init__(self, name, attr, **kwargs):
         super(ObjectColumn, self).__init__(name, attr=attr, **kwargs)
         self.attr = attr
         self.id = attr
     def get_cell_data(self, row):
-        r = row
-        for i in self.attr.split('.'):
-            r = getattr(r, i)
-            if r is None:
-                return None
-        return r
+        return recursive_getattr(row, self.attr)
 
 class ObjectOrNoneColumn(ObjectColumn):
     def get_cell_data(self, row):
@@ -77,7 +82,30 @@ class ObjectOrNoneColumn(ObjectColumn):
             return super(self, ObjectColumn).get_cell_data(row)
         except:
             return None
+
+class LinkColumnMixin:
+    def get_cell_data(self, row):
+        return Markup('<a href="{}">{}</a>').format(self.href(row),
+                                                    super().get_cell_data(row))
     
+        
+class ObjectLinkColumn(LinkColumnMixin, ObjectColumn):
+    def __init__(self, name, attr, endpoint,
+                 id_attr='id', id_arg='id', **kwargs):
+        super().__init__(name,
+                         attr=attr,
+                         id_attr=id_attr,
+                         id_arg=id_arg,
+                         **kwargs)
+        self.id_attr = id_attr
+        self.id_arg = id_arg
+        self.endpoint = endpoint
+
+    def href(self, row):
+        return url_for(self.endpoint,
+                       **{self.id_arg: recursive_getattr(row, self.id_attr)})
+    
+        
 class DescriptorColumn(Column):
     def __init__(self, name, descriptor, **kwargs):
         super(ObjectColumn, self).__init__(name, attr=attr, **kwargs)
