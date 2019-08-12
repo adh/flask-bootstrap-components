@@ -22,6 +22,8 @@ setup(
     packages=[
         "flask_bootstrap_components",
     ],
+    setup_requires=['setuptools_scm'],
+    use_scm_version=True,
     zip_safe=True,
     include_package_data=True,
     classifiers=[
