@@ -6,7 +6,7 @@ def read(fname):
 
 setup(
     name="Flask-Bootstrap-Components",
-    version="0.1",
+    version="0.1.1",
     author = "Ales Hakl",
     author_email = "ales@hakl.net",
     description = ("Collection of HTML generation helpers for Flask with Bootstrap 4"),
@@ -23,6 +23,7 @@ setup(
         "flask_bootstrap_components",
     ],
     zip_safe=True,
+    include_package_data=True,
     classifiers=[
         'Development Status :: 3 - Alpha',
 
