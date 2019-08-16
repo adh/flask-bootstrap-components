@@ -3,9 +3,6 @@ from markupsafe import Markup
 from .markup import element
 
 DEFAULT_CONTENT_MAP = {
-    True: "\u2713",
-    False: "\u2715",
-    None: "\U0001f6ab",
 }
 
 class Column(object):
@@ -33,6 +30,13 @@ class Column(object):
         return element("td", {}, self.get_cell_inner_html(row))
 
     def convert(self, data):
+        if data is True:
+            return "\u2713"
+        if data is False:
+            return "\u2715"
+        if data is None:
+            return "\U0001f6ab"
+        
         return data
     
     def get_cell_inner_html(self, row):
