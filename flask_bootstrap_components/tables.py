@@ -95,7 +95,7 @@ class LinkColumnMixin:
         
 class ObjectLinkColumn(LinkColumnMixin, ObjectColumn):
     def __init__(self, name, attr, endpoint,
-                 id_attr='id', id_arg='id', **kwargs):
+                 id_attr='id', id_arg='id', additional_args={}, **kwargs):
         super().__init__(name,
                          attr=attr,
                          id_attr=id_attr,
@@ -104,10 +104,12 @@ class ObjectLinkColumn(LinkColumnMixin, ObjectColumn):
         self.id_attr = id_attr
         self.id_arg = id_arg
         self.endpoint = endpoint
+        self.additional_args = additional_args
 
     def href(self, row):
-        return url_for(self.endpoint,
-                       **{self.id_arg: recursive_getattr(row, self.id_attr)})
+        args = dict(self.additional_args)
+        args[self.id_arg] = recursive_getattr(row, self.id_attr)
+        return url_for(self.endpoint, **args)
     
         
 class DescriptorColumn(Column):
@@ -242,13 +244,13 @@ class PagedTable(PlainTable):
             return url
     
     def page_url(self, page):
-        args = dict(request.args)
+        args = dict(request.args, **request.view_args)
         args["cur_page"] = page
         args["per_page"] = self.per_page
         return self.with_anchor(url_for(request.endpoint, **args))
 
     def per_page_url(self, per_page):
-        args = dict(request.args)
+        args = dict(request.args, **request.view_args)
         page = int(self.cur_page / self.per_page * per_page)
         args["cur_page"] = page
         args["per_page"] = per_page
