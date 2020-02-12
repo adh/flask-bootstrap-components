@@ -71,12 +71,23 @@ def recursive_getattr(r, attr):
         if r is None:
             return None
     return r
-    
+
+class FixedColumn(Column):
+    def __init__(self, name, value, **kwargs):
+        super().__init__(name, value=value, **kwargs)
+        self.value = value
+        self.id = name
+
+    def get_cell_data(self, row):
+        return self.value
+
+
 class ObjectColumn(Column): 
     def __init__(self, name, attr, **kwargs):
         super(ObjectColumn, self).__init__(name, attr=attr, **kwargs)
         self.attr = attr
         self.id = attr
+        
     def get_cell_data(self, row):
         return recursive_getattr(row, self.attr)
 
@@ -91,13 +102,11 @@ class LinkColumnMixin:
     def get_cell_inner_html(self, row):
         return Markup('<a href="{}">{}</a>').format(self.href(row),
                                                     super().get_cell_inner_html(row))
-    
-        
-class ObjectLinkColumn(LinkColumnMixin, ObjectColumn):
-    def __init__(self, name, attr, endpoint,
+
+class ObjectLinkColumnMixin(LinkColumnMixin):
+    def __init__(self, name, endpoint,
                  id_attr='id', id_arg='id', additional_args={}, **kwargs):
         super().__init__(name,
-                         attr=attr,
                          id_attr=id_attr,
                          id_arg=id_arg,
                          **kwargs)
@@ -111,6 +120,16 @@ class ObjectLinkColumn(LinkColumnMixin, ObjectColumn):
         args[self.id_arg] = recursive_getattr(row, self.id_attr)
         return url_for(self.endpoint, **args)
     
+        
+class ObjectLinkColumn(ObjectLinkColumnMixin, ObjectColumn):
+    def __init__(self, name, attr, **kwargs):
+        super().__init__(name, attr=attr, **kwargs)
+
+class FixedLinkColumn(ObjectLinkColumnMixin, FixedColumn):
+    def __init__(self, name, value, **kwargs):
+        super().__init__(name, value=value, **kwargs)
+
+        
         
 class DescriptorColumn(Column):
     def __init__(self, name, descriptor, **kwargs):
