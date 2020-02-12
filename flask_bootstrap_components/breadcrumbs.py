@@ -3,7 +3,7 @@ from .markup import element
 from markupsafe import Markup
 
 class Breadcrumb:
-    __slots__ = ["name", "url"]
+    __slots__ = ["name", "url", "kwargs"]
 
     def __init__(self, name, url=None, **kwargs):
         self.name = name
@@ -12,7 +12,7 @@ class Breadcrumb:
 
     @property
     def href(self):
-        if url is None:
+        if self.url is None:
             return None
         
         return url_or_url_for(self.url, **self.kwargs)        
