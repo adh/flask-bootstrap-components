@@ -7,21 +7,28 @@ class Breadcrumb:
 
     def __init__(self, name, url=None, **kwargs):
         self.name = name
-        if url is not None:
-            self.url = url_or_url_for(url, **kwargs)
-        else:
-            self.url = None
+        self.url = url
+        self.kwargs = kwargs
+
+    @property
+    def href(self):
+        if url is None:
+            return None
+        
+        return url_or_url_for(self.url, **self.kwargs)        
             
     def __html__(self, title=None):
         name = self.name
         if name is None:
             name = title
-        
-        if self.url:
+
+        href = self.href
+            
+        if href:
             return element("li",
                            {"class": "breadcrumb-item"},
                            element("a",
-                                   {"href": self.url},
+                                   {"href": href},
                                    name))
         else:
             return element("li",
