@@ -206,16 +206,20 @@ class ObjectColumnMixin(object):
 
 class IterableDataTable(BaseTable):
     def __init__(self, columns, data, row_factory=None,
+                 row_kwargs={},
                  **kwargs):
         if row_factory:
             self.row_factory = row_factory
         else:
             self.row_factory = TableRow
+        self.row_kwargs = row_kwargs
         super().__init__(columns, data, 
                          **kwargs)
 
     def transform_data(self, data):
-        return [self.row_factory(i, self.columns) for i in data]
+        return [self.row_factory(i, self.columns,
+                                 **self.row_kwargs)
+                for i in data]
 
     @property
     def column_headers(self):
@@ -225,6 +229,32 @@ class PlainTable(SequenceColumnMixin, IterableDataTable):
     pass
 class ObjectTable(ObjectColumnMixin, IterableDataTable):
     pass
+
+class GroupHeaderRow(TableRow):
+    def __init__(self, data, columns, content_accessor):
+        self.data = data
+        self.columns = columns
+        self.content_accessor = content_accessor
+
+    def get_content_html(self):
+        return self.content_accessor(self.data)
+        
+    def __html__(self):
+        header = super().__html__()
+        return (
+            Markup('{}<tr><td colspan="{}">{}</td></tr>')
+            .format(header, len(self.columns),
+                    self.get_content_html())
+        )
+
+class GroupHeaderTable(PlainTable):
+    def __init__(self, columns, data, content_accessor,
+                 row_factory=None, **kwargs):
+        if row_factory is None:
+            row_factory = GroupHeaderRow
+        super().__init__(columns, data, row_factory=row_factory,
+                         row_kwargs={"content_accessor": content_accessor},
+                         **kwargs)
 
 class PagedTable(PlainTable):
     def __init__(self, columns, data,
