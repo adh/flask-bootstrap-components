@@ -36,8 +36,10 @@ class Breadcrumb:
                            name)
     
 class Breadcrumbs:
-    def __init__(self):
+    def __init__(self, extend=None):
         self.items = []
+        if extend:
+            self.items += extend.items
 
     def add(self, name, url=None, **kwargs):
         self.items.append(Breadcrumb(name, url, **kwargs))
