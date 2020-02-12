@@ -41,6 +41,9 @@ class Breadcrumbs:
         if extend:
             self.items += extend.items
 
+    def extend(self):
+        return type(self)(extend=self)
+            
     def add(self, name, url=None, **kwargs):
         self.items.append(Breadcrumb(name, url, **kwargs))
 
