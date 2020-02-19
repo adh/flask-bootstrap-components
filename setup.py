@@ -24,7 +24,7 @@ setup(
     ],
     setup_requires=['setuptools_scm'],
     use_scm_version=True,
-    zip_safe=True,
+    zip_safe=False,
     include_package_data=True,
     classifiers=[
         'Development Status :: 3 - Alpha',
