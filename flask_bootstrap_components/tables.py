@@ -12,6 +12,7 @@ class Column(object):
                  convert=None,
                  data_proc=None,
                  content_map=DEFAULT_CONTENT_MAP,
+                 td_attrs={},
                  **kwargs):
         self.name = name
         self.id = name
@@ -20,14 +21,16 @@ class Column(object):
         self._options = options
         if convert:
             self.convert = convert
-        
+
+        self.td_attrs = td_attrs
+            
         self.content_map = content_map
             
         if data_proc:
             self.get_cell_data = data_proc
 
     def get_cell_html(self, row):
-        return element("td", {}, self.get_cell_inner_html(row))
+        return element("td", self.td_attrs, self.get_cell_inner_html(row))
 
     def convert(self, data):
         if data is True:
