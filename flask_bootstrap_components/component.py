@@ -27,7 +27,11 @@ class Component:
         else:
             self.name_prefix = name
 
+    def render_template(self, name, **kwargs):
+        return Markup(render_template(name, **kwargs))
 
+    def field_name(self, name):
+        return "{}__{}".format(self.name_prefix, name)
         
 class SlotDescriptor:
     __slots__ = ["slot"]
@@ -167,7 +171,12 @@ class InteractiveComponent(Component, metaclass=InteractiveComponentMetaClass):
 
     def build_url(self, **kwargs):
         return self.url_with_anchor(self.state.build_url(**kwargs))
+    
 
+class FormProcessingComponent(InteractiveComponent):
+    def process(self):
+        pass
+    
 class FormComponent(InteractiveComponent):
     def __init__(self, **kwargs):
         self.process_on_submit_called = False
@@ -186,13 +195,13 @@ class FormComponent(InteractiveComponent):
             return
 
         if not self.validate_trigger_field():
-            self.handle_expired_csrf_token()
+            self.handle_invalid_csrf_token()
 
             
         self.process()
         self.commit()
 
-    def handle_expired_csrf_toekn(self):
+    def handle_invalid_csrf_token(self):
         abort(400)
 
     def process(self):
@@ -208,7 +217,7 @@ class FormComponent(InteractiveComponent):
     
     @property
     def hidden_trigger_field(self):
-        return Markup('<input type="hidden" name="{}" value="{}"').format(
+        return Markup('<input type="hidden" name="{}" value="{}">').format(
             self.trigger_field_name,
             self.trigger_field_value
         )
