@@ -1,6 +1,7 @@
 from flask import render_template, request, url_for
 from markupsafe import Markup
 from .markup import element
+from .component import Component, InteractiveComponent, StateSlot, IntStateSlot
 
 DEFAULT_CONTENT_MAP = {
 }
@@ -150,16 +151,30 @@ class ColumnsMixin(object):
     def column_factory(self, i, index):
         return i
 
-class BaseTable(ColumnsMixin):
+class BaseTable(ColumnsMixin, Component):
     def __init__(self, 
-                 columns, 
-                 data,
+                 columns=None, 
+                 data=None,
                  classes=["table-striped"],
                  responsive=True,
                  **kwargs):
 
-        self.columns = self.transform_columns(columns)
-        self.data = self.transform_data(data)
+        super().__init__(columns=columns,
+                         data=data,
+                         classes=classes,
+                         responsive=responsive,
+                         **kwargs)
+
+        if columns is not None:
+            self.set_columns(columns)
+        else:
+            self.columns = None
+
+        if data is not None:
+            self.set_data(data)
+        else:
+            self.data = None
+            
         self.classes = classes
         self.responsive = responsive
 
@@ -169,8 +184,19 @@ class BaseTable(ColumnsMixin):
             return ""
         else:
             return " "+" ".join(self.classes)
+
+    def set_data(self, data):
+        self.data = self.transform_data(data)        
+
+    def set_columns(self, columns):
+        self.columns = self.transform_columns(columns)        
         
     def __html__(self):
+        if self.data is None:
+            raise ValueError("No data set for table")
+        if self.columns is None:
+            raise ValueError("Table does not have column configuration")
+        
         return Markup(render_template('flask_bootstrap_components/internal/table.html',
                                       table=self))
     
@@ -208,15 +234,19 @@ class ObjectColumnMixin(object):
     column_factory=ObjectColumn
 
 class IterableDataTable(BaseTable):
-    def __init__(self, columns, data, row_factory=None,
+    def __init__(self,
+                 row_factory=None,
                  row_kwargs={},
+                 data=None,
                  **kwargs):
         if row_factory:
             self.row_factory = row_factory
         else:
             self.row_factory = TableRow
         self.row_kwargs = row_kwargs
-        super().__init__(columns, data, 
+        
+        super().__init__(row_factory=row_factory,
+                         row_kwargs=row_kwargs,
                          **kwargs)
 
     def transform_data(self, data):
@@ -259,52 +289,48 @@ class GroupHeaderTable(PlainTable):
                          row_kwargs={"content_accessor": content_accessor},
                          **kwargs)
 
-class PagedTable(PlainTable):
-    def __init__(self, columns, data,
-                 per_page=None,
-                 cur_page=None,
-                 per_page_options=[10, 50, 100],
-                 anchor=None,
-                 **kwargs):
-        if not cur_page:
-            cur_page = int(request.args.get("cur_page", "0"))
-        if not per_page:
-            per_page = int(request.args.get("per_page", per_page_options[0]))
-        else:
-            per_page_options = []
+class PagedTable(PlainTable, InteractiveComponent):
 
-        self.anchor = anchor
-        self.per_page = per_page
-        self.cur_page = cur_page
-        self.per_page_options = per_page_options
-
-        data = data[self.cur_page*self.per_page:(self.cur_page+1)*self.per_page]
-
-        self.has_next = len(data) == self.per_page
-        
-        super().__init__(columns, data, 
-                         **kwargs)
+    per_page = IntStateSlot(100)
+    cur_page = IntStateSlot(0)
     
+    def __init__(self,
+                 columns=None,
+                 data=None,
+                 per_page_options=[10, 50, 100],
+                 anchor=None, # For backward compatibility
+                 name=None,
+                 **kwargs):
+        
+        if anchor is not None: 
+            name = anchor
+
+        self.per_page_options = per_page_options
+            
+        super().__init__(columns=columns,
+                         data=None,
+                         per_page_options=per_page_options,
+                         name=name,
+                         state_defaults=self.defaults_from_kwargs(**kwargs),
+                         **kwargs)
+
+        self.set_data(data)
+
+    def set_data(self, data):
+        data = data[self.cur_page*self.per_page
+                    : (self.cur_page+1)*self.per_page]
+        self.has_next = len(data) == self.per_page
+        super().set_data(data)
+        
     def __html__(self):
         return Markup(render_template('flask_bootstrap_components/internal/paged_table.html',
                                       table=self))
-
-    def with_anchor(self, url):
-        if self.anchor:
-            return url + "#" + self.anchor
-        else:
-            return url
-    
+        
     def page_url(self, page):
-        args = dict(request.args, **request.view_args)
-        args["cur_page"] = page
-        args["per_page"] = self.per_page
-        return self.with_anchor(url_for(request.endpoint, **args))
+        return self.build_url(cur_page=page)
 
     def per_page_url(self, per_page):
-        args = dict(request.args, **request.view_args)
-        page = int(self.cur_page / self.per_page * per_page)
-        args["cur_page"] = page
-        args["per_page"] = per_page
-        return self.with_anchor(url_for(request.endpoint, **args))
+        page = int(self.cur_page * self.per_page / per_page)
+        return self.build_url(cur_page=page,
+                              per_page=per_page)
     
