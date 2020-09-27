@@ -5,11 +5,13 @@ from flask import (
     abort,
     redirect,
     current_app,
+    _app_ctx_stack,
 )
 from markupsafe import Markup
 from .markup import element
 from .csrf import get_scoped_auth_key
 from .base import get_extension_object
+from werkzeug.local import LocalProxy
 
 class Component:
     def __init__(self, name=None, parent=None, **kwargs):
@@ -31,8 +33,8 @@ class Component:
         return Markup(render_template(name, **kwargs))
 
     def field_name(self, name):
-        return "{}__{}".format(self.name_prefix, name)
-        
+        return "{}__{}".format(self.name_prefix, name)    
+    
 class SlotDescriptor:
     __slots__ = ["slot"]
 
@@ -75,7 +77,24 @@ class StateSlot:
 class IntStateSlot(StateSlot):
     def load_value(self, value):
         return int(value)
-    
+
+class RequestStateTracker:
+    def __init__(self):
+        self.dirty_set = set()
+
+    @classmethod
+    def get_instance(cls):
+        ctx = _app_ctx_stack.top
+        if ctx is not None:
+            if not hasattr(ctx, 'fbc_request_state_tracker'):
+                ctx.fbc_request_state_tracker = cls()
+            return ctx.fbc_request_state_tracker
+
+    def mark_changed(self, state):
+        self.dirty_set.add(state)
+
+request_state_tracker = LocalProxy(RequestStateTracker.get_instance)
+        
 class InteractiveComponentState:
     def __init__(self, slots, name_prefix, defaults={}):
         self.name_prefix = name_prefix
@@ -84,9 +103,11 @@ class InteractiveComponentState:
         for i in slots:
             arg = self.get_argument(i.name, None)
             if arg is not None:
-                self.state[i] = i.load_value(arg)
-                self.changed.add(i)
+                self.set_value(i, i.load_value(arg))
+                
             elif i.name in defaults:
+                # When setting from defaults we dont want to mark slot/state
+                # as changed
                 self.state[i] = defaults[i.name]
             else:
                 self.state[i] = i.default
@@ -104,6 +125,10 @@ class InteractiveComponentState:
     
     def set_value(self, slot, value):
         self.state[slot] = value
+
+        if not self.changed:
+            request_state_tracker.mark_changed(self)
+    
         self.changed.add(slot)
         
     def build_url(self, **kwargs):
