@@ -237,7 +237,6 @@ class IterableDataTable(BaseTable):
     def __init__(self,
                  row_factory=None,
                  row_kwargs={},
-                 data=None,
                  **kwargs):
         if row_factory:
             self.row_factory = row_factory
@@ -259,9 +258,26 @@ class IterableDataTable(BaseTable):
         return self.columns
 
 class PlainTable(SequenceColumnMixin, IterableDataTable):
-    pass
+    # XXX: this thing is necessary to preserve backward compatibility with code
+    # that expects SomethingTable constructor to take two positional arguments
+    def __init__(self, 
+                 columns=None, 
+                 data=None,
+                 **kwargs):
+        super().__init__(columns=columns,
+                         data=data,
+                         **kwargs)
+        
 class ObjectTable(ObjectColumnMixin, IterableDataTable):
-    pass
+    # XXX: this thing is necessary to preserve backward compatibility with code
+    # that expects SomethingTable constructor to take two positional arguments
+    def __init__(self, 
+                 columns=None, 
+                 data=None,
+                 **kwargs):
+        super().__init__(columns=columns,
+                         data=data,
+                         **kwargs)
 
 class GroupHeaderRow(TableRow):
     def __init__(self, data, columns, content_accessor):
