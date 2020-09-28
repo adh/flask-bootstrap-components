@@ -17,9 +17,6 @@ class Column(object):
                  **kwargs):
         self.name = name
         self.id = name
-        self.header = Markup('<th scope="col">{0}</th>').format(name)
-        self.filter = filter
-        self._options = options
         if convert:
             self.convert = convert
 
@@ -52,6 +49,48 @@ class Column(object):
         
         return res
 
+    def get_header_html(self):
+        return Markup('<th scope="col">{0}</th>').format(
+            self.get_header_inner_html()
+        )
+
+    def get_header_inner_html(self):
+        return self.name
+    
+    @property
+    def header(self):
+        return self.get_header_html()
+
+    
+class ColumnProxy(Column):
+    def __init__(self, impl):
+        self.impl = impl
+
+    @property
+    def name(self):
+        return self.impl.name
+    
+    @property
+    def id(self):
+        return self.impl.id
+    
+    @property
+    def td_attrs(self):
+        return self.impl.td_attrs
+
+    def get_cell_html(self, row):
+        return self.impl.get_cell_html(row)
+
+    def get_header_html(self):
+        return self.impl.get_header_html()
+
+    def get_cell_inner_html(self, row):
+        return self.impl.get_cell_html(row)
+
+    def get_header_inner_html(self):
+        return self.impl.get_header_html()
+
+    
 class CustomDataColumn(Column):
     def __init__(self, name, key, **kwargs):
         super().__init__(name, key=key, **kwargs)
