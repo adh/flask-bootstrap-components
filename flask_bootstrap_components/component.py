@@ -148,7 +148,12 @@ class InteractiveComponentState:
 class InteractiveComponentMetaClass(type):
     def __init__(cls, name, bases, attrs):
         super().__init__(name, bases, attrs)
-        cls._state_slots = []
+        
+        if not hasattr(cls, "_state_slots"):
+            cls._state_slots = []
+        else:
+            cls._state_slots = list(cls._state_slots)
+            
         for name in dir(cls):
             if name.startswith('_'):
                 continue
