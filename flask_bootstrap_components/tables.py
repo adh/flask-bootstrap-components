@@ -78,6 +78,9 @@ class ColumnProxy(Column):
     def td_attrs(self):
         return self.impl.td_attrs
 
+    def get_cell_data(self, row):
+        return self.impl.get_cell_data(row)
+
     def get_cell_html(self, row):
         return self.impl.get_cell_html(row)
 

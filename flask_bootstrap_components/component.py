@@ -78,6 +78,12 @@ class IntStateSlot(StateSlot):
     def load_value(self, value):
         return int(value)
 
+class BooleanStateSlot(StateSlot):
+    def load_value(self, value):
+        return value == "1"
+    def dump_value(self, value):
+        return "1" if value else "0"
+    
 class RequestStateTracker:
     def __init__(self):
         self.dirty_set = set()
