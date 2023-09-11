@@ -15,6 +15,7 @@ from werkzeug.local import LocalProxy
 
 class Component:
     def __init__(self, name=None, parent=None, **kwargs):
+        self.children = []
         if name is None:
             name = get_extension_object().generate_default_name(
                 self.__class__.__name__
@@ -26,8 +27,12 @@ class Component:
         if self.parent:
             self.name_prefix = "{}__{}".format(self.parent.name_prefix,
                                                self.name)
+            self.parent.add_child(self)
         else:
             self.name_prefix = name
+
+    def add_child(self, child):
+        self.children.append(child)
 
     def render_template(self, name, **kwargs):
         return Markup(render_template(name, **kwargs))
@@ -102,7 +107,8 @@ class RequestStateTracker:
 request_state_tracker = LocalProxy(RequestStateTracker.get_instance)
         
 class InteractiveComponentState:
-    def __init__(self, slots, name_prefix, defaults={}):
+    def __init__(self, component, slots, name_prefix, defaults={}):
+        self.component = component
         self.name_prefix = name_prefix
         self.state = {}
         self.changed = set()
@@ -136,19 +142,29 @@ class InteractiveComponentState:
             request_state_tracker.mark_changed(self)
     
         self.changed.add(slot)
-        
+
+    def update_slot_values(self, args, overide=set()):
+        for slot, value in self.state.items():
+            if slot.name in overide:
+                value = overide[slot.name]
+            elif slot not in self.changed:
+                continue
+
+            name = self.convert_argument_name(slot.name)
+            args[name] = slot.dump_value(value)
+            print(name, value)
+
+        for i in self.component.interactive_children:
+            i.state.update_slot_values(args)
+
+
     def build_url(self, **kwargs):
         args = dict(request.args, **request.view_args)
 
-        for slot, value in self.state.items():
-            if slot.name in kwargs:
-                value = kwargs[slot.name]
-            elif slot not in self.changed:
-                continue
+        self.update_slot_values(args, overide=kwargs)
             
-            name = self.convert_argument_name(slot.name)
-            args[name] = slot.dump_value(value)
-            
+        print(args)
+
         return url_for(request.endpoint, **args)
             
 class InteractiveComponentMetaClass(type):
@@ -191,9 +207,16 @@ class InteractiveComponent(Component, metaclass=InteractiveComponentMetaClass):
                 res[i.name] = v
 
         return res
-        
+
+    @property
+    def interactive_children(self):
+        return [
+            i for i in self.children if isinstance(i, InteractiveComponent)
+        ]
+
     def init_state(self, defaults={}):
         self.state = InteractiveComponentState(
+            self,
             self._state_slots,
             self.name_prefix,
             defaults=defaults
