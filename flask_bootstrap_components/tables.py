@@ -372,7 +372,8 @@ class PagedTable(PlainTable, InteractiveComponent):
                          state_defaults=self.defaults_from_kwargs(**kwargs),
                          **kwargs)
 
-        self.set_data(data)
+        if data is not None:
+            self.set_data(data)
 
     def set_data(self, data):
         data = data[self.cur_page*self.per_page
